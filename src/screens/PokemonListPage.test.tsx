@@ -25,7 +25,7 @@ describe('PokemonListPage', () => {
       await user.click(getByText('Bulbasaur'));
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith(/* The route to Bulbasaur */);
+    expect(mockNavigate).toHaveBeenCalledWith('/pokemon/1');
   });
   test.todo('typing in the search bar filters the results');
 });
