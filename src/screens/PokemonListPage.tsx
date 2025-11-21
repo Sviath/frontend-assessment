@@ -1,10 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { tss } from '../tss';
 import { useGetPokemons, Pokemon } from 'src/hooks/useGetPokemons';
 
+// Custom hook to debounce search input
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 const PokemonListPage = () => {
-  const { data, loading, error } = useGetPokemons();
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const { data, loading, error } = useGetPokemons(debouncedSearchTerm);
   const { classes } = useStyles();
   const navigate = useNavigate();
 
@@ -12,26 +31,123 @@ const PokemonListPage = () => {
     navigate(`/pokemon/${pokemonId}`);
   };
 
+  // Function to get a random message when no Pokémon are found
+  const getRandomEmptyMessage = () => {
+    const messages = [
+      "No Pokémon found… they're probably hiding in tall grass.",
+      'No Pokémon here… maybe they all fainted?',
+      'No Pokémon found. Did Team Rocket steal them again?',
+      "Area empty. Even Zubat didn't show up (that's rare).",
+      'Looks like this patch of grass is empty.',
+      'No Pokémon found… try a different route?',
+      'No Pokémon found… they might be out of season.',
+      'Empty area. A wild MissingNo. appeared instead!',
+      "No Pokémon here… maybe they're in the underground?",
+      'No Pokémon found. Did you forget your Poké Flute?',
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  };
+
   const renderContent = () => {
     switch (true) {
+      case loading && debouncedSearchTerm !== '':
+        return (
+          <>
+            <div className={classes.searchContainer}>
+              <input
+                type="text"
+                placeholder="Search Pokémon..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={classes.searchInput}
+              />
+            </div>
+            <div className={classes.statusMessage}>Searching...</div>
+          </>
+        );
       case loading:
-        return <div className={classes.statusMessage}>Loading...</div>;
+        return (
+          <>
+            <div className={classes.searchContainer}>
+              <input
+                type="text"
+                placeholder="Search Pokémon..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={classes.searchInput}
+              />
+            </div>
+            <div className={classes.statusMessage}>Loading...</div>
+          </>
+        );
       case Boolean(error):
-        return <div className={classes.statusMessage}>Error: {error?.message}</div>;
+        return (
+          <>
+            <div className={classes.searchContainer}>
+              <input
+                type="text"
+                placeholder="Search Pokémon..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={classes.searchInput}
+              />
+            </div>
+            <div className={classes.statusMessage}>Error: {error?.message}</div>
+          </>
+        );
       case !data || data.length === 0:
-        return <div className={classes.statusMessage}>No Pokémon found</div>;
+        return (
+          <>
+            <div className={classes.searchContainer}>
+              <input
+                type="text"
+                placeholder="Search Pokémon..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={classes.searchInput}
+              />
+            </div>
+            <div className={classes.statusMessage}>{getRandomEmptyMessage()}</div>
+          </>
+        );
+      case debouncedSearchTerm && data && data.length === 0:
+        return (
+          <>
+            <div className={classes.searchContainer}>
+              <input
+                type="text"
+                placeholder="Search Pokémon..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={classes.searchInput}
+              />
+            </div>
+            <div className={classes.statusMessage}>No Pokémon match your search</div>
+          </>
+        );
       default:
         return (
-          <ul className={classes.list}>
-            {data.map((pokemon: Pokemon) => (
-              <PokemonItem
-                key={pokemon.id}
-                pokemon={pokemon}
-                classes={classes}
-                onClick={() => handlePokemonClick(String(pokemon.id))}
+          <>
+            <div className={classes.searchContainer}>
+              <input
+                type="text"
+                placeholder="Search Pokémon..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={classes.searchInput}
               />
-            ))}
-          </ul>
+            </div>
+            <ul className={classes.list}>
+              {data?.map((pokemon: Pokemon) => (
+                <PokemonItem
+                  key={pokemon.id}
+                  pokemon={pokemon}
+                  classes={classes}
+                  onClick={() => handlePokemonClick(String(pokemon.id))}
+                />
+              ))}
+            </ul>
+          </>
         );
     }
   };
@@ -111,6 +227,23 @@ const useStyles = tss.create(({ theme }) => ({
   root: {
     color: theme.color.text.primary,
     padding: '20px',
+  },
+  searchContainer: {
+    marginBottom: '20px',
+    textAlign: 'center',
+  },
+  searchInput: {
+    padding: '10px 15px',
+    fontSize: '16px',
+    borderRadius: '8px',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    backgroundColor: theme.color.surface,
+    color: theme.color.text.primary,
+    width: '300px',
+    outline: 'none',
+    '&:focus': {
+      borderColor: '#007bff',
+    },
   },
   statusMessage: {
     padding: '20px',
