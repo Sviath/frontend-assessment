@@ -95,14 +95,16 @@ interface PokemonAPIResponse {
 }
 
 // Search should be done client-side for the mid-level assessment. Uncomment for the senior assessment.
-export const useGetPokemons = (/* search?: string */): {
+export const useGetPokemons = (
+  search?: string,
+): {
   data: Pokemon[];
   loading: boolean;
   error: useQuery.Result['error'];
 } => {
   const { data, loading, error } = useQuery<{ pokemon: PokemonAPIResponse[] }>(GET_POKEMONS, {
     variables: {
-      search: '', // `.*${search}.*`,
+      search: search || '', // `.*${search}.*`,
     },
   });
 
