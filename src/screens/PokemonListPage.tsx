@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { tss } from '../tss';
 import { useGetPokemons, Pokemon } from 'src/hooks/useGetPokemons';
 import { getTypeColor } from 'src/utils/pokemonTypes';
@@ -24,12 +24,30 @@ const useDebounce = (value: string, delay: number) => {
 const PokemonListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const { data, loading, error } = useGetPokemons(debouncedSearchTerm);
+  const itemsPerPage = 20;
+
+  // Use search params to maintain pagination state in URL
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageFromUrl = parseInt(searchParams.get('page') || '0', 10);
+  const page = Number.isNaN(pageFromUrl) ? 0 : pageFromUrl;
+
+  // When search term changes, reset pagination to page 0
+  useEffect(() => {
+    if (searchTerm) {
+      setSearchParams({ page: '0' });
+    }
+  }, [searchTerm, setSearchParams]);
+
+  const { data, loading, error, totalCount } = useGetPokemons(
+    debouncedSearchTerm,
+    itemsPerPage,
+    page * itemsPerPage,
+  );
   const { classes } = useStyles();
   const navigate = useNavigate();
 
   const handlePokemonClick = (pokemonId: string) => {
-    navigate(`/pokemon/${pokemonId}`);
+    navigate(`/pokemon/${pokemonId}?page=${page}`);
   };
 
   // Function to get a random message when no Pokémon are found
@@ -59,7 +77,9 @@ const PokemonListPage = () => {
                 type="text"
                 placeholder="Search Pokémon..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                }}
                 className={classes.searchInput}
               />
             </div>
@@ -74,7 +94,9 @@ const PokemonListPage = () => {
                 type="text"
                 placeholder="Search Pokémon..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                }}
                 className={classes.searchInput}
               />
             </div>
@@ -89,7 +111,9 @@ const PokemonListPage = () => {
                 type="text"
                 placeholder="Search Pokémon..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                }}
                 className={classes.searchInput}
               />
             </div>
@@ -104,7 +128,9 @@ const PokemonListPage = () => {
                 type="text"
                 placeholder="Search Pokémon..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                }}
                 className={classes.searchInput}
               />
             </div>
@@ -119,7 +145,9 @@ const PokemonListPage = () => {
                 type="text"
                 placeholder="Search Pokémon..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                }}
                 className={classes.searchInput}
               />
             </div>
@@ -134,7 +162,9 @@ const PokemonListPage = () => {
                 type="text"
                 placeholder="Search Pokémon..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                }}
                 className={classes.searchInput}
               />
             </div>
@@ -148,6 +178,68 @@ const PokemonListPage = () => {
                 />
               ))}
             </ul>
+            {!debouncedSearchTerm && (
+              <div className={classes.paginationContainer}>
+                <button
+                  className={`${classes.paginationButton} ${page === 0 ? classes.paginationButtonDisabled : ''}`}
+                  onClick={() => {
+                    if (page > 0) {
+                      setSearchParams({ page: (page - 1).toString() });
+                    }
+                  }}
+                  disabled={page === 0}
+                >
+                  Previous
+                </button>
+                <span className={classes.pageInfo}>
+                  Page {page + 1} of {Math.ceil(totalCount / itemsPerPage) || 1}
+                </span>
+                <button
+                  className={classes.paginationButton}
+                  onClick={() => {
+                    const totalPages = Math.ceil(totalCount / itemsPerPage);
+                    if (page < totalPages - 1) {
+                      setSearchParams({ page: (page + 1).toString() });
+                    }
+                  }}
+                  disabled={page >= Math.ceil(totalCount / itemsPerPage) - 1}
+                >
+                  Next
+                </button>
+                <div className={classes.pageInputContainer}>
+                  <span>Go to page:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={Math.ceil(totalCount / itemsPerPage) || 1}
+                    defaultValue={page + 1}
+                    className={classes.pageInput}
+                    onBlur={(e) => {
+                      const newPage = parseInt(e.target.value, 10);
+                      if (
+                        !Number.isNaN(newPage) &&
+                        newPage >= 1 &&
+                        newPage <= (Math.ceil(totalCount / itemsPerPage) || 1)
+                      ) {
+                        setSearchParams({ page: (newPage - 1).toString() });
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const newPage = parseInt((e.target as HTMLInputElement).value, 10);
+                        if (
+                          !Number.isNaN(newPage) &&
+                          newPage >= 1 &&
+                          newPage <= (Math.ceil(totalCount / itemsPerPage) || 1)
+                        ) {
+                          setSearchParams({ page: (newPage - 1).toString() });
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </>
         );
     }
@@ -357,6 +449,51 @@ const useStyles = tss.create(({ theme }) => ({
     height: '80px',
     objectFit: 'contain',
     marginBottom: '8px',
+  },
+  paginationContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '16px',
+    marginTop: '20px',
+    padding: '10px',
+  },
+  paginationButton: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    borderRadius: '4px',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    backgroundColor: theme.color.surface,
+    color: theme.color.text.primary,
+    cursor: 'pointer',
+  },
+  paginationButtonDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed !important',
+    '&:hover': {
+      backgroundColor: 'transparent',
+    },
+  },
+  pageInfo: {
+    color: theme.color.text.primary,
+    fontSize: '14px',
+    padding: '0 12px',
+  },
+  pageInputContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginLeft: 'auto',
+  },
+  pageInput: {
+    width: '60px',
+    padding: '4px 8px',
+    fontSize: '14px',
+    borderRadius: '4px',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    backgroundColor: theme.color.surface,
+    color: theme.color.text.primary,
+    textAlign: 'center',
   },
 }));
 

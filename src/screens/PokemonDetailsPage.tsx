@@ -1,18 +1,27 @@
 import React from 'react';
 import { Modal } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { tss } from '../tss';
 import { useGetPokemonDetails } from 'src/hooks/useGetPokemons';
 
 const PokemonDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { classes } = useStyles();
 
   const { data, loading, error } = useGetPokemonDetails(id || '');
 
   const handleCancel = () => {
-    navigate('/list');
+    // Extract page from URL params to maintain pagination state
+    const searchParams = new URLSearchParams(location.search);
+    const page = searchParams.get('page');
+
+    if (page) {
+      navigate(`/list?page=${page}`);
+    } else {
+      navigate('/list');
+    }
   };
 
   // Only show modal if there's an ID in the URL

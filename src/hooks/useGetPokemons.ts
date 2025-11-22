@@ -21,9 +21,10 @@ export interface PokemonDetail extends Pokemon {
 }
 
 export const GET_POKEMONS = gql`
-  query GetPokemons($search: String) {
+  query GetPokemons($search: String, $first: Int, $offset: Int) {
     pokemon(
-      limit: 151
+      limit: $first
+      offset: $offset
       order_by: { id: asc }
       where: {
         pokemonspecy: {
@@ -46,6 +47,17 @@ export const GET_POKEMONS = gql`
             name
           }
         }
+      }
+    }
+    pokemon_aggregate(
+      where: {
+        pokemonspecy: {
+          pokemonspeciesnames: { language: { name: { _eq: "en" } }, name: { _regex: $search } }
+        }
+      }
+    ) {
+      aggregate {
+        count
       }
     }
   }
@@ -133,14 +145,22 @@ interface PokemonDetailAPIResponse {
 // Search should be done client-side for the mid-level assessment. Uncomment for the senior assessment.
 export const useGetPokemons = (
   search?: string,
+  first: number = 20,
+  offset: number = 0,
 ): {
   data: Pokemon[];
   loading: boolean;
   error: useQuery.Result['error'];
+  totalCount: number;
 } => {
-  const { data, loading, error } = useQuery<{ pokemon: PokemonAPIResponse[] }>(GET_POKEMONS, {
+  const { data, loading, error } = useQuery<{
+    pokemon: PokemonAPIResponse[];
+    pokemon_aggregate: { aggregate: { count: number } };
+  }>(GET_POKEMONS, {
     variables: {
       search: search || '', // `.*${search}.*`,
+      first,
+      offset,
     },
   });
 
@@ -157,6 +177,7 @@ export const useGetPokemons = (
           sprite: p.pokemonsprites?.[0]?.sprites,
         }),
       ) ?? [],
+    totalCount: data?.pokemon_aggregate?.aggregate?.count || 0,
     loading,
     error,
   };
