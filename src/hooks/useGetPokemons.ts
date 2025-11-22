@@ -9,7 +9,15 @@ export interface Pokemon {
 }
 
 export interface PokemonDetail extends Pokemon {
-  // Details
+  capture_rate?: number;
+  weight?: number;
+  height?: number;
+  pokemonstats?: {
+    base_stat: number;
+    stat: {
+      name: string;
+    };
+  }[];
 }
 
 export const GET_POKEMONS = gql`
@@ -44,7 +52,7 @@ export const GET_POKEMONS = gql`
 `;
 
 export const GET_POKEMON_DETAILS = gql`
-  query GetPokemonDetails($id: String!) {
+  query GetPokemonDetails($id: Int!) {
     pokemon(where: { id: { _eq: $id } }) {
       id
       pokemonspecy {
@@ -94,6 +102,34 @@ interface PokemonAPIResponse {
   }[];
 }
 
+interface PokemonDetailAPIResponse {
+  id: string;
+  pokemonspecy: {
+    pokemonspeciesnames: {
+      name: string;
+    }[];
+    capture_rate: number;
+  };
+  pokemonsprites: {
+    sprites: string;
+  }[];
+  pokemontypes: {
+    type: {
+      typenames: {
+        name: string;
+      }[];
+    };
+  }[];
+  weight: number;
+  height: number;
+  pokemonstats: {
+    base_stat: number;
+    stat: {
+      name: string;
+    };
+  }[];
+}
+
 // Search should be done client-side for the mid-level assessment. Uncomment for the senior assessment.
 export const useGetPokemons = (
   search?: string,
@@ -121,6 +157,50 @@ export const useGetPokemons = (
           sprite: p.pokemonsprites?.[0]?.sprites,
         }),
       ) ?? [],
+    loading,
+    error,
+  };
+};
+
+export const useGetPokemonDetails = (
+  id: string,
+): {
+  data: PokemonDetail | undefined;
+  loading: boolean;
+  error: useQuery.Result['error'];
+} => {
+  const { data, loading, error } = useQuery<{ pokemon: PokemonDetailAPIResponse[] }>(
+    GET_POKEMON_DETAILS,
+    {
+      variables: {
+        id: parseInt(id, 10),
+      },
+      skip: !id,
+    },
+  );
+
+  if (!data || !data.pokemon || data.pokemon.length === 0) {
+    return { data: undefined, loading, error };
+  }
+
+  const pokemon = data.pokemon[0];
+
+  const result: PokemonDetail = {
+    id: String(pokemon.id),
+    name: pokemon.pokemonspecy.pokemonspeciesnames?.[0]?.name,
+    types:
+      pokemon.pokemontypes
+        ?.map((t) => t.type.typenames?.[0]?.name)
+        .filter((name): name is string => Boolean(name)) ?? [],
+    sprite: pokemon.pokemonsprites?.[0]?.sprites,
+    capture_rate: pokemon.pokemonspecy.capture_rate,
+    weight: pokemon.weight,
+    height: pokemon.height,
+    pokemonstats: pokemon.pokemonstats,
+  };
+
+  return {
+    data: result,
     loading,
     error,
   };
