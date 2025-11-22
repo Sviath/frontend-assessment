@@ -1,10 +1,18 @@
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { PokemonListPage } from './screens/PokemonListPage';
+import { PokemonDetailsPage } from './screens/PokemonDetailsPage';
 import { LayoutWrapper } from './LayoutWrapper';
 import { ApolloProvider } from '@apollo/client/react';
 import { ApolloClient, HttpLink, InMemoryCache } from '@apollo/client';
 import { HomePage } from './screens/HomePage';
+
+const PokemonListPageWithDetails = () => (
+  <>
+    <PokemonListPage />
+    <PokemonDetailsPage />
+  </>
+);
 
 const client = new ApolloClient({
   link: new HttpLink({
@@ -20,6 +28,7 @@ const App = () => (
         <Route path="/" element={<LayoutWrapper />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/list" element={<PokemonListPage />} />
+          <Route path="/pokemon/:id" element={<PokemonListPageWithDetails />} />
         </Route>
       </Routes>
     </BrowserRouter>

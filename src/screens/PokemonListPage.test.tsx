@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render } from 'src/test-utils';
+import { act, render } from 'src/test-utils';
 import { PokemonListPage } from './PokemonListPage';
 import { useNavigate } from 'react-router-dom';
 
