@@ -1,6 +1,19 @@
 # UI Assessment - Pokédex
 
-This is a take-home assessment that will leverage various frontend technologies to evaluate your aptitude. You can complete this at your own pace. Your recruiter will communicate when you should submit this assessment.
+## What I built
+- **Server-side search with debounce**: The list and pagination talk directly to the GraphQL API using `where` regex filtering; typing waits ~350ms before firing requests to avoid spamming the backend.
+- **Pagination that remembers state**: Page + search live in the URL (`page`, `search`) so deep links and back/forward keep your place; closing the details modal preserves them.
+- **Detail modal via routing**: `/pokemon/:id` opens an Ant Design modal on top of the list; supports deep linking and keeps list context intact.
+- **JSS everywhere, no CSS files**: Styling lives in `tss` definitions per component; body styles set via `useGlobalBodyStyles`.
+- **Resilient states**: Loading, error, and empty cases are handled with friendly random empty messages.
+- **Tests**: Jest + RTL cover list render, navigation, and debounced search; `yarn test --runInBand` passes.
+
+## Why these choices
+- Used **server-side search** to satisfy senior requirements and reduce client filtering costs; regex is escaped and case-insensitive to avoid API errors.
+- Kept **state in the URL** so refreshes and shared links behave like a real app (no hidden local state).
+- Added **debounce** to keep the search snappy while avoiding unnecessary API calls.
+- Used **AntD modal** so I could have a solid, accessible dialog right away without rebuilding everything myself.
+- Centralized **body theming in code** to satisfy the “JSS only” rule and keep global look consistent.
 
 ---
 
@@ -107,6 +120,22 @@ Replace the client-side search with server-side search:
 - Implement debouncing for the search input to avoid excessive API calls while typing
 - Show a loading indicator while search results are being fetched
 - Search should work in conjunction with pagination
+
+---
+
+## How to run
+1. `yarn install` (or `npm install`)
+2. `yarn dev` to run locally
+3. `yarn test --runInBand` to run Jest/RTL suite
+4. `npm run lint -- --fix` to verify TypeScript + ESLint
+
+## Files worth noting
+- `src/hooks/useGetPokemons.ts` — GraphQL queries, server-side search + pagination helpers.
+- `src/hooks/useDebouncedValue.ts` — tiny debounce hook for search input.
+- `src/hooks/useGlobalBodyStyles.ts` — applies global body styling (no CSS files).
+- `src/screens/PokemonListPage.tsx` — search, pagination, list UI, empty/error/loading handling.
+- `src/screens/PokemonDetailsPage.tsx` — route-driven modal overlay with Pokémon details.
+- `src/constants/messages.ts` — randomized empty-state quips.
 
 ———
 

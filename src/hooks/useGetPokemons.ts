@@ -20,7 +20,7 @@ export interface PokemonDetail extends Pokemon {
   }[];
 }
 
-export const GET_POKEMONS = gql`
+export const getPokemons = gql`
   query GetPokemons($search: String, $first: Int, $offset: Int) {
     pokemon(
       limit: $first
@@ -63,7 +63,7 @@ export const GET_POKEMONS = gql`
   }
 `;
 
-export const GET_POKEMON_DETAILS = gql`
+export const getPokemonDetails = gql`
   query GetPokemonDetails($id: Int!) {
     pokemon(where: { id: { _eq: $id } }) {
       id
@@ -156,7 +156,7 @@ export const useGetPokemons = (
   const { data, loading, error } = useQuery<{
     pokemon: PokemonAPIResponse[];
     pokemon_aggregate: { aggregate: { count: number } };
-  }>(GET_POKEMONS, {
+  }>(getPokemons, {
     variables: {
       search: search || '', // `.*${search}.*`,
       first,
@@ -190,18 +190,24 @@ export const useGetPokemonDetails = (
   loading: boolean;
   error: useQuery.Result['error'];
 } => {
-  const { data, loading, error } = useQuery<{ pokemon: PokemonDetailAPIResponse[] }>(
-    GET_POKEMON_DETAILS,
-    {
-      variables: {
-        id: parseInt(id, 10),
-      },
-      skip: !id,
-    },
-  );
+  const numericId = parseInt(id, 10);
+  const shouldSkip = !id || Number.isNaN(numericId);
 
-  if (!data || !data.pokemon || data.pokemon.length === 0) {
-    return { data: undefined, loading, error };
+  const { data, loading, error } = useQuery<{
+    pokemon: PokemonDetailAPIResponse[];
+  }>(getPokemonDetails, {
+    variables: {
+      id: numericId,
+    },
+    skip: shouldSkip,
+  });
+
+  if (shouldSkip || !data || !data.pokemon || data.pokemon.length === 0) {
+    return {
+      data: undefined,
+      loading: shouldSkip ? false : loading,
+      error,
+    };
   }
 
   const pokemon = data.pokemon[0];
