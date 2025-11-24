@@ -142,6 +142,16 @@ interface PokemonDetailAPIResponse {
   }[];
 }
 
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const buildSearchPattern = (term?: string | null): string => {
+  if (!term || !term.trim()) {
+    return '.*';
+  }
+  const escaped = escapeRegex(term.trim());
+  return `(?i).*${escaped}.*`;
+};
+
 // Search should be done client-side for the mid-level assessment. Uncomment for the senior assessment.
 export const useGetPokemons = (
   search?: string,
@@ -158,7 +168,7 @@ export const useGetPokemons = (
     pokemon_aggregate: { aggregate: { count: number } };
   }>(getPokemons, {
     variables: {
-      search: search || '', // `.*${search}.*`,
+      search: buildSearchPattern(search),
       first,
       offset,
     },
