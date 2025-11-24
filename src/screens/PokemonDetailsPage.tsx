@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal } from 'antd';
+import { Modal, Skeleton } from 'antd';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { tss } from '../tss';
 import { useGetPokemonDetails } from 'src/hooks/useGetPokemons';
@@ -13,15 +13,8 @@ const PokemonDetailsPage = () => {
   const { data, loading, error } = useGetPokemonDetails(id || '');
 
   const handleCancel = () => {
-    // Extract page from URL params to maintain pagination state
-    const searchParams = new URLSearchParams(location.search);
-    const page = searchParams.get('page');
-
-    if (page) {
-      navigate(`/list?page=${page}`);
-    } else {
-      navigate('/list');
-    }
+    // close the modal but keep search/page query params intact.
+    navigate({ pathname: '/list', search: location.search });
   };
 
   // Only show modal if there's an ID in the URL
@@ -40,7 +33,7 @@ const PokemonDetailsPage = () => {
       destroyOnClose
     >
       <div className={classes.modalContent}>
-        {loading && <div className={classes.statusMessage}>Loading...</div>}
+        {loading && <Skeleton active paragraph={{ rows: 6 }} />}
         {error && <div className={classes.statusMessage}>Error: {error.message}</div>}
         {data && !loading && !error && (
           <div className={classes.pokemonDetails}>
@@ -103,6 +96,9 @@ const PokemonDetailsPage = () => {
               </div>
             </div>
           </div>
+        )}
+        {!data && !loading && !error && (
+          <div className={classes.statusMessage}>No details available for this Pokémon.</div>
         )}
       </div>
     </Modal>

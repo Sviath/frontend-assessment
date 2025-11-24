@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { tss } from '../tss';
 import { useGetPokemons, Pokemon } from 'src/hooks/useGetPokemons';
 import { getTypeColor } from 'src/utils/pokemonTypes';
+import { emptyPokemonMessages } from 'src/constants/messages';
 
 // Custom hook to debounce search input
 const useDebounce = (value: string, delay: number) => {
@@ -25,24 +26,73 @@ const PokemonListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const itemsPerPage = 20;
+  const [pageInputValue, setPageInputValue] = useState('1');
+  const [pageInputError, setPageInputError] = useState('');
 
   // Use search params to maintain pagination state in URL
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = parseInt(searchParams.get('page') || '0', 10);
   const page = Number.isNaN(pageFromUrl) ? 0 : pageFromUrl;
 
+  const previousSearch = useRef(debouncedSearchTerm);
+
   // When search term changes, reset pagination to page 0
   useEffect(() => {
-    if (searchTerm) {
+    if (previousSearch.current !== debouncedSearchTerm) {
+      previousSearch.current = debouncedSearchTerm;
       setSearchParams({ page: '0' });
     }
-  }, [searchTerm, setSearchParams]);
+  }, [debouncedSearchTerm, setSearchParams]);
 
   const { data, loading, error, totalCount } = useGetPokemons(
     debouncedSearchTerm,
     itemsPerPage,
     page * itemsPerPage,
   );
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
+
+  useEffect(() => {
+    setPageInputValue(String(page + 1));
+    setPageInputError('');
+  }, [page]);
+
+  // Helper functions for pagination
+  const goToPage = (newPage: number) => {
+    setSearchParams({ page: newPage.toString() });
+  };
+
+  const goToNextPage = () => {
+    if (page < totalPages - 1) {
+      goToPage(page + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (page > 0) {
+      goToPage(page - 1);
+    }
+  };
+
+  const handlePageInputSubmit = () => {
+    const newPage = parseInt(pageInputValue, 10);
+
+    if (Number.isNaN(newPage)) {
+      setPageInputError('Please enter a valid number.');
+      setPageInputValue(String(page + 1));
+      return;
+    }
+
+    if (newPage < 1 || newPage > totalPages) {
+      setPageInputError(
+        "Wow! that would be a lot of Pokemon, I'm sure one day we would get there, but for now please input within your page limit.",
+      );
+      setPageInputValue(String(page + 1));
+      return;
+    }
+
+    setPageInputError('');
+    setSearchParams({ page: (newPage - 1).toString() });
+  };
   const { classes } = useStyles();
   const navigate = useNavigate();
 
@@ -51,27 +101,15 @@ const PokemonListPage = () => {
   };
 
   // Function to get a random message when no Pokémon are found
-  const getRandomEmptyMessage = () => {
-    const messages = [
-      "No Pokémon found… they're probably hiding in tall grass.",
-      'No Pokémon here… maybe they all fainted?',
-      'No Pokémon found. Did Team Rocket steal them again?',
-      "Area empty. Even Zubat didn't show up (that's rare).",
-      'Looks like this patch of grass is empty.',
-      'No Pokémon found… try a different route?',
-      'No Pokémon found… they might be out of season.',
-      'Empty area. A wild MissingNo. appeared instead!',
-      "No Pokémon here… maybe they're in the underground?",
-      'No Pokémon found. Did you forget your Poké Flute?',
-    ];
-    return messages[Math.floor(Math.random() * messages.length)];
-  };
+  const getRandomEmptyMessage = () =>
+    emptyPokemonMessages[Math.floor(Math.random() * emptyPokemonMessages.length)];
 
   const renderContent = () => {
     switch (true) {
       case loading && debouncedSearchTerm !== '':
         return (
           <>
+            <h1 className={classes.pageTitle}>Pokédex</h1>
             <div className={classes.searchContainer}>
               <input
                 type="text"
@@ -89,6 +127,7 @@ const PokemonListPage = () => {
       case loading:
         return (
           <>
+            <h1 className={classes.pageTitle}>Pokédex</h1>
             <div className={classes.searchContainer}>
               <input
                 type="text"
@@ -106,6 +145,7 @@ const PokemonListPage = () => {
       case Boolean(error):
         return (
           <>
+            <h1 className={classes.pageTitle}>Pokédex</h1>
             <div className={classes.searchContainer}>
               <input
                 type="text"
@@ -123,6 +163,7 @@ const PokemonListPage = () => {
       case !data || data.length === 0:
         return (
           <>
+            <h1 className={classes.pageTitle}>Pokédex</h1>
             <div className={classes.searchContainer}>
               <input
                 type="text"
@@ -140,6 +181,7 @@ const PokemonListPage = () => {
       case debouncedSearchTerm && data && data.length === 0:
         return (
           <>
+            <h1 className={classes.pageTitle}>Pokédex</h1>
             <div className={classes.searchContainer}>
               <input
                 type="text"
@@ -157,6 +199,7 @@ const PokemonListPage = () => {
       default:
         return (
           <>
+            <h1 className={classes.pageTitle}>Pokédex</h1>
             <div className={classes.searchContainer}>
               <input
                 type="text"
@@ -178,68 +221,47 @@ const PokemonListPage = () => {
                 />
               ))}
             </ul>
-            {!debouncedSearchTerm && (
-              <div className={classes.paginationContainer}>
-                <button
-                  className={`${classes.paginationButton} ${page === 0 ? classes.paginationButtonDisabled : ''}`}
-                  onClick={() => {
-                    if (page > 0) {
-                      setSearchParams({ page: (page - 1).toString() });
+            <div className={classes.paginationContainer}>
+              <button
+                className={`${classes.paginationButton} ${
+                  page === 0 ? classes.paginationButtonDisabled : ''
+                }`}
+                onClick={goToPreviousPage}
+                disabled={page === 0}
+              >
+                Previous
+              </button>
+              <span className={classes.pageInfo}>
+                Page {page + 1} of {totalPages}
+              </span>
+              <button
+                className={`${classes.paginationButton} ${
+                  page >= totalPages - 1 ? classes.paginationButtonDisabled : ''
+                }`}
+                onClick={goToNextPage}
+                disabled={page >= totalPages - 1}
+              >
+                Next
+              </button>
+              <div className={classes.pageInputContainer}>
+                <span>Go to page:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  value={pageInputValue}
+                  onChange={(e) => setPageInputValue(e.target.value)}
+                  className={classes.pageInput}
+                  onBlur={handlePageInputSubmit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handlePageInputSubmit();
                     }
                   }}
-                  disabled={page === 0}
-                >
-                  Previous
-                </button>
-                <span className={classes.pageInfo}>
-                  Page {page + 1} of {Math.ceil(totalCount / itemsPerPage) || 1}
-                </span>
-                <button
-                  className={classes.paginationButton}
-                  onClick={() => {
-                    const totalPages = Math.ceil(totalCount / itemsPerPage);
-                    if (page < totalPages - 1) {
-                      setSearchParams({ page: (page + 1).toString() });
-                    }
-                  }}
-                  disabled={page >= Math.ceil(totalCount / itemsPerPage) - 1}
-                >
-                  Next
-                </button>
-                <div className={classes.pageInputContainer}>
-                  <span>Go to page:</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max={Math.ceil(totalCount / itemsPerPage) || 1}
-                    defaultValue={page + 1}
-                    className={classes.pageInput}
-                    onBlur={(e) => {
-                      const newPage = parseInt(e.target.value, 10);
-                      if (
-                        !Number.isNaN(newPage) &&
-                        newPage >= 1 &&
-                        newPage <= (Math.ceil(totalCount / itemsPerPage) || 1)
-                      ) {
-                        setSearchParams({ page: (newPage - 1).toString() });
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const newPage = parseInt((e.target as HTMLInputElement).value, 10);
-                        if (
-                          !Number.isNaN(newPage) &&
-                          newPage >= 1 &&
-                          newPage <= (Math.ceil(totalCount / itemsPerPage) || 1)
-                        ) {
-                          setSearchParams({ page: (newPage - 1).toString() });
-                        }
-                      }
-                    }}
-                  />
-                </div>
+                />
               </div>
-            )}
+            </div>
+            {pageInputError && <div className={classes.pageError}>{pageInputError}</div>}
           </>
         );
     }
@@ -318,6 +340,14 @@ const useStyles = tss.create(({ theme }) => ({
     padding: '20px',
     textAlign: 'center',
     fontSize: '16px',
+  },
+  pageTitle: {
+    textAlign: 'center',
+    fontSize: '3rem',
+    fontWeight: 'bold',
+    margin: '20px 0',
+    color: '#FFFFFF',
+    letterSpacing: '2px',
   },
   list: {
     listStyle: 'none',
@@ -469,7 +499,7 @@ const useStyles = tss.create(({ theme }) => ({
   },
   paginationButtonDisabled: {
     opacity: 0.5,
-    cursor: 'not-allowed !important',
+    cursor: 'default !important',
     '&:hover': {
       backgroundColor: 'transparent',
     },
@@ -494,6 +524,11 @@ const useStyles = tss.create(({ theme }) => ({
     backgroundColor: theme.color.surface,
     color: theme.color.text.primary,
     textAlign: 'center',
+  },
+  pageError: {
+    color: '#ffffffff',
+    marginTop: '8px',
+    fontSize: '13px',
   },
 }));
 
